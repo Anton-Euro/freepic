@@ -1,22 +1,27 @@
 import config
-import telebot
-import time
-# from selenium import webdriver
+import logging
+import asyncio
+from aiogram import Bot, Dispatcher, executor, types
+from selenium import webdriver
 
-bot = telebot.TeleBot(config.TOKEN)
+options = webdriver.ChromeOptions()
+options.add_argument('--headless')
 
-@bot.message_handler(commands=['start'])
-def start(message):
-	bot.send_message(message.chat.id, "начало")
+br = webdriver.Chrome(options=options)
+
+logging.basicConfig(level=logging.INFO)
+
+bot = Bot(token=config.TOKEN)
+dp = Dispatcher(bot)		
+
+@dp.message_handler(commands=['start'])
+async def start_pars(message: types.Message):
+	await message.answer('Старт')
 	while True:
-		# browser = webdriver.Chrome()
-		# browser.get('https://www.epicgames.com/store/ru/free-games')
-
-		# html = browser.find_element_by_class_name('css-1nzrk0w-CardGrid-styles__groupWrapper').text
-		# browser.quit()
-
-		# bot.send_message(message.chat.id, html)
-		bot.send_message(message.chat.id, 'https://www.epicgames.com/store/ru/free-games')
-		time.sleep(86400)
-
-bot.polling(none_stop=True)
+		br.get('https://www.epicgames.com/store/ru/free-games')
+		html = br.find_element_by_class_name('css-1442lgn-CardGrid-styles__group').text
+		await message.answer(html)
+		await asyncio.sleep(10)
+#86400
+if __name__ == '__main__':
+	executor.start_polling(dp, skip_updates=True)
