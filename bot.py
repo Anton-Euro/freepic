@@ -25,7 +25,7 @@ async def start_pars(message: types.Message):
 		br.get('https://www.epicgames.com/store/ru/free-games')
 		html = br.find_element_by_class_name('css-1442lgn-CardGrid-styles__group').text
 		await message.answer(html)
-		await asyncio.sleep(10)
-#86400
+		await asyncio.sleep(86400)
+
 if __name__ == '__main__':
 	executor.start_polling(dp, skip_updates=True)
