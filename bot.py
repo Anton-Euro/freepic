@@ -3,11 +3,15 @@ import logging
 import asyncio
 from aiogram import Bot, Dispatcher, executor, types
 from selenium import webdriver
+import os
 
 options = webdriver.ChromeOptions()
+options.binary_location = os.environ.get('GOOGLE_CHROME_BIN')
 options.add_argument('--headless')
+options.add_argument('--disable-dev-shm-usage')
+options.add_argument('--no-sandbox')
 
-br = webdriver.Chrome(options=options)
+br = webdriver.Chrome(executable_path=os.environ.get('CHROMEDRIVER PATH'), options=options)
 
 logging.basicConfig(level=logging.INFO)
 
