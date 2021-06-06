@@ -17,7 +17,7 @@ br = webdriver.Chrome(executable_path=os.environ.get('CHROMEDRIVER_PATH'), optio
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=config.TOKEN)
-dp = Dispatcher(bot)		
+dp = Dispatcher(bot)
 
 db = SQLmanager('db.db')
 
@@ -44,7 +44,7 @@ async def parse():
 		subs = db.get_subscriptions()
 		for sub in subs:
 			await bot.send_message(sub[1],html)
-		await asyncio.sleep(600)
+		await asyncio.sleep(10)
 
 if __name__ == '__main__':
 	loop = asyncio.get_event_loop()
