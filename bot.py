@@ -1,82 +1,47 @@
 import config
 import logging
 import asyncio
-from datetime import datetime
-
 from aiogram import Bot, Dispatcher, executor, types
-from sqlighter import SQLighter
+from selenium import webdriver
+import os
+from sqlitemanager import SQLmanager
 
-from stopgame import StopGame
+options = webdriver.ChromeOptions()
+options.binary_location = os.environ.get('GOOGLE_CHROME_BIN')
+options.add_argument('--headless')
+options.add_argument('--disable-dev-shm-usage')
+options.add_argument('--no-sandbox')
 
-# задаем уровень логов
+br = webdriver.Chrome(executable_path=os.environ.get('CHROMEDRIVER_PATH'), options=options)
+
 logging.basicConfig(level=logging.INFO)
 
-# инициализируем бота
-bot = Bot(token=config.API_TOKEN)
+bot = Bot(token=config.TOKEN)
 dp = Dispatcher(bot)
 
-# инициализируем соединение с БД
-db = SQLighter('db.db')
+user = [None, False]
 
-# инициализируем парсер
-sg = StopGame('lastkey.txt')
+@dp.message_handler(commands=['start'])
+async def start(message: types.Message):
+	global user
+	user = [message.from_user.id,True]
+	await message.answer('Старт')
 
-# Команда активации подписки
-@dp.message_handler(commands=['subscribe'])
-async def subscribe(message: types.Message):
-	if(not db.subscriber_exists(message.from_user.id)):
-		# если юзера нет в базе, добавляем его
-		db.add_subscriber(message.from_user.id)
-	else:
-		# если он уже есть, то просто обновляем ему статус подписки
-		db.update_subscription(message.from_user.id, True)
-	
-	await message.answer("Вы успешно подписались на рассылку!\nЖдите, скоро выйдут новые обзоры и вы узнаете о них первыми =)")
+@dp.message_handler(commands=['stop'])
+async def stop(message: types.Message):
+	global user
+	user = [message.from_user.id,False]
+	await message.answer('Стоп')
 
-# Команда отписки
-@dp.message_handler(commands=['unsubscribe'])
-async def unsubscribe(message: types.Message):
-	if(not db.subscriber_exists(message.from_user.id)):
-		# если юзера нет в базе, добавляем его с неактивной подпиской (запоминаем)
-		db.add_subscriber(message.from_user.id, False)
-		await message.answer("Вы итак не подписаны.")
-	else:
-		# если он уже есть, то просто обновляем ему статус подписки
-		db.update_subscription(message.from_user.id, False)
-		await message.answer("Вы успешно отписаны от рассылки.")
-
-# проверяем наличие новых игр и делаем рассылки
-async def scheduled(wait_for):
+async def parse():
 	while True:
-		await asyncio.sleep(wait_for)
+		br.get('https://www.epicgames.com/store/ru/free-games')
+		html = br.find_element_by_class_name('css-1442lgn-CardGrid-styles__group').text
+		if user[1] == True:
+			await bot.send_message(user[0],html)
+		await asyncio.sleep(10)
 
-		# проверяем наличие новых игр
-		new_games = sg.new_games()
-
-		if(new_games):
-			# если игры есть, переворачиваем список и итерируем
-			new_games.reverse()
-			for ng in new_games:
-				# парсим инфу о новой игре
-				nfo = sg.game_info(ng)
-
-				# получаем список подписчиков бота
-				subscriptions = db.get_subscriptions()
-
-				# отправляем всем новость
-				with open(sg.download_image(nfo['image']), 'rb') as photo:
-					for s in subscriptions:
-						await bot.send_photo(
-							s[1],
-							photo,
-							caption = nfo['title'] + "\n" + "Оценка: " + nfo['score'] + "\n" + nfo['excerpt'] + "\n\n" + nfo['link'],
-							disable_notification = True
-						)
-				
-				# обновляем ключ
-				sg.update_lastkey(nfo['id'])
-
-# запускаем лонг поллинг
 if __name__ == '__main__':
-	dp.loop.create_task(scheduled(10)) # пока что оставим 10 секунд (в качестве теста)
-	executor.start_polling(dp, skip_updates=True)
+	loop = asyncio.get_event_loop()
+	loop.create_task(parse())
+	executor.start_polling(dp, skip_updates=True, loop=loop)
