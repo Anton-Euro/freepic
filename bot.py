@@ -67,6 +67,7 @@ async def parse():
 	global last_check
 	last_check = None
 	while True:
+		br.refresh()
 		br.get('https://www.epicgames.com/store/ru/free-games')
 		html = br.find_element_by_class_name('css-1442lgn-CardGrid-styles__group').text
 		if last_check != html:
